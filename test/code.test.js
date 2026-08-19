@@ -1,5 +1,5 @@
 /**
- * SIMULACIÓN Y SUITE DE PRUEBAS PARA LÓGICA DE MATRIZ DE SEGUIMIENTO
+ * SIMULACIÓN Y SUITE DE PRUEBAS PARA LÓGICA DE MATRIZ DE SEGUIMIENTO (MÓVIL / PC)
  */
 
 const assert = require('assert');
@@ -76,7 +76,7 @@ function determinarDestinatariosCorreo(estatus, config, supervisor, trabajador, 
 }
 
 // RUN TESTS
-console.log('🧪 Ejecutando suite de pruebas unitarias para Matriz de Seguimiento...');
+console.log('🧪 Ejecutando suite de pruebas unitarias para Matriz de Seguimiento (Móvil / PC)...');
 
 // Test Generación ID
 assert.strictEqual(generarIdTicket(1), 'TICKET-001');
@@ -101,7 +101,7 @@ console.log('✅ Test Mantenimiento Empresa -> Sucursal -> Ubicación PASADO');
 // Test Link WhatsApp
 const linkWa = construirLinkWhatsApp('+52 1 555-123-4567', 'Hola Ticket TICKET-001');
 assert.strictEqual(linkWa, 'https://wa.me/5215551234567?text=Hola%20Ticket%20TICKET-001');
-console.log('✅ Test Enlace WhatsApp PASADO');
+console.log('✅ Test Enlace WhatsApp para Móvil PASADO');
 
 // Test Destinatarios de Notificación
 const mockConfig = { correoEncargada: 'encargada@test.com', correoAsistente: 'asistente@test.com' };

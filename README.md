@@ -1,10 +1,10 @@
 # Matriz de Seguimiento de Trabajos (1ra Etapa)
 
-Sistema completo de gestión y seguimiento de tickets/trabajos para Google Sheets y Google Apps Script.
+Sistema completo de gestión y seguimiento de tickets/trabajos para Google Sheets y Google Apps Script, optimizado para computadoras y **dispositivos móviles (celulares/tablets con Android e iOS)**.
 
 ## 📋 Descripción
 
-Este proyecto proporciona un script integral en Google Apps Script (`Code.gs`) que transforma una hoja de Google Sheets en una **Matriz de Seguimiento de Trabajos Asignados**. Permite llevar el control completo de tareas desde su registro hasta su cierre y facturación.
+Este proyecto proporciona un script integral en Google Apps Script (`Code.gs`) que transforma una hoja de Google Sheets en una **Matriz de Seguimiento de Trabajos Asignados**. Permite llevar el control completo de tareas desde su registro hasta su cierre y facturación, adaptado para que supervisores y encargados puedan operar directamente desde el celular en campo.
 
 ---
 
@@ -31,10 +31,27 @@ La hoja principal contiene las siguientes columnas:
 | **O** | Trabajador / Contratista / Empresa | Lista desplegable vinculada a la hoja `Trabajadores` |
 | **P** | Estatus | Estado del ticket (Ver ciclo de estatus) |
 | **Q** | Motivo de Parada | Detalle cuando el estatus es *Parado por...* |
-| **R** | Evidencias (Fotos) | Enlace a la carpeta de Google Drive creada para el ticket |
+| **R** | Evidencias (Fotos) | Enlace a la carpeta de Google Drive (Escribir `CREAR` en celular para generar) |
 | **S** | Fecha Finalización | Registrada automáticamente al finalizar o cerrar |
 | **T** | Observaciones | Notas adicionales |
-| **U** | Color / Estado visual | Coloreado automático según el estatus activo |
+| **U** | Link WhatsApp Supervisor | Enlace directo para abrir WhatsApp con 1 solo toque desde celular |
+| **V** | Color / Estado visual | Coloreado automático según el estatus activo |
+
+---
+
+## 📱 Uso desde el Celular (App de Google Sheets)
+
+Para modificar la matriz fácilmente desde un teléfono inteligente (Android o iPhone):
+
+1. **Edición Nativa**: Abre la aplicación oficial de **Google Sheets** en tu celular.
+2. **Listas Desplegables**: Al tocar las celdas de *Empresa, Sucursal, Estatus, etc.*, la app móvil muestra el selector táctil con las opciones.
+3. **Disparadores Automáticos**: El script utiliza el evento `onEdit(e)`, por lo que cualquier cambio realizado desde el celular ejecutará automáticamente:
+   - Asignación de ID y Fecha de Registro.
+   - Filtro de Sucursal y autollenado de Ubicación.
+   - Generación del enlace directo de WhatsApp en la Columna U.
+   - Coloreado de la fila y envío de correos electrónicos.
+4. **Enviar WhatsApp desde Celular**: Ve a la **Columna U** y toca el enlace `https://wa.me/...`; se abrirá directamente la App de WhatsApp con el mensaje formateado para el supervisor.
+5. **Crear Carpeta de Drive desde Celular**: Escribe la palabra `CREAR` o `NUEVA` en la celda de la **Columna R (Evidencias)**. Al presionar guardar, el script creará la carpeta en Google Drive y reemplazará el texto con la URL de la carpeta.
 
 ---
 
@@ -66,7 +83,7 @@ El sistema crea y gestiona automáticamente las siguientes hojas auxiliares para
 
 ## 🚀 Instrucciones de Instalación en Google Sheets
 
-1. Abre tu hoja de cálculo en **Google Sheets**.
+1. Abre tu hoja de cálculo en **Google Sheets** (desde la computadora).
 2. Ve al menú superior y selecciona **Extensiones > Apps Script**.
 3. Elimina el código existente en el archivo `Code.gs` y **pega todo el contenido** del archivo `Code.gs` de este repositorio.
 4. Haz clic en el ícono de **Guardar** (💾) o presiona `Ctrl + S` / `Cmd + S`.
@@ -74,13 +91,6 @@ El sistema crea y gestiona automáticamente las siguientes hojas auxiliares para
 6. En el menú superior aparecerá la pestaña personalizada **"Matriz de Seguimiento"**.
 7. Haz clic en **Matriz de Seguimiento > Inicializar / Configurar Hoja**.
    *(Si es la primera vez, Google te pedirá autorizar los permisos del script)*.
-
----
-
-## 📱 Funcionalidades Adicionales del Menú
-
-- **Enviar WhatsApp a Supervisor**: Selecciona cualquier celda de la fila del ticket y haz clic en este menú para abrir WhatsApp Web / App con un mensaje pre-armado listo para enviar al supervisor asignado.
-- **Crear Carpeta de Evidencias en Drive**: Selecciona cualquier celda de la fila del ticket y ejecuta esta opción para crear una carpeta dedicada en Google Drive y pegar la URL automáticamente en la columna **Evidencias (Fotos)**.
 
 ---
 

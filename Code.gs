@@ -1,6 +1,7 @@
 /**
  * MATRIZ DE SEGUIMIENTO DE TRABAJOS - GOOGLE APPS SCRIPT
  * 1ra Etapa - Sistema Completo de Gestión de Tickets y Trabajos Asignados
+ * Optimizado para uso en computadoras y teléfonos móviles (Google Sheets App Android/iOS)
  */
 
 // ==========================================
@@ -38,7 +39,8 @@ const COLUMNAS_MATRIZ = {
   EVIDENCIAS: 18,           // R
   FECHA_FINALIZACION: 19,   // S
   OBSERVACIONES: 20,        // T
-  COLOR_ESTADO: 21          // U
+  LINK_WHATSAPP: 21,        // U (Enlace directo a WhatsApp fácil de tocar en celular)
+  COLOR_ESTADO: 22          // V
 };
 
 const ESTATUS_OPCIONES = [
@@ -68,16 +70,18 @@ const ESTATUS_ATENCION_OPCIONES = [
 ];
 
 // ==========================================
-// MENÚ PERSONALIZADO
+// MENÚ PERSONALIZADO (Para PC)
 // ==========================================
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Matriz de Seguimiento')
-    .addItem('Inicializar / Configurar Hoja', 'inicializarSistema')
-    .addSeparator()
-    .addItem('Enviar WhatsApp a Supervisor', 'enviarWhatsAppSupervisorSeleccionado')
-    .addItem('Crear Carpeta de Evidencias en Drive', 'crearCarpetaEvidenciasSeleccionada')
-    .addToUi();
+  if (ui) {
+    ui.createMenu('Matriz de Seguimiento')
+      .addItem('Inicializar / Configurar Hoja', 'inicializarSistema')
+      .addSeparator()
+      .addItem('Enviar WhatsApp a Supervisor', 'enviarWhatsAppSupervisorSeleccionado')
+      .addItem('Crear Carpeta de Evidencias en Drive', 'crearCarpetaEvidenciasSeleccionada')
+      .addToUi();
+  }
 }
 
 // ==========================================
@@ -111,7 +115,11 @@ function inicializarSistema() {
   // 3. Configurar encabezados y formato de la hoja Matriz
   configurarHojaMatriz(ss);
 
-  SpreadsheetApp.getUi().alert('✅ Sistema de Matriz de Seguimiento inicializado correctamente.');
+  try {
+    SpreadsheetApp.getUi().alert('✅ Sistema de Matriz de Seguimiento inicializado correctamente.');
+  } catch (e) {
+    Logger.log('Sistema inicializado.');
+  }
 }
 
 function poblarHojasAuxiliares(ss) {
@@ -197,6 +205,7 @@ function configurarHojaMatriz(ss) {
     'Evidencias (Fotos)',
     'Fecha Finalización',
     'Observaciones',
+    'Link WhatsApp Supervisor',
     'Color / Estado visual'
   ];
 
@@ -209,7 +218,7 @@ function configurarHojaMatriz(ss) {
 
   hoja.setFrozenRows(1);
 
-  // Configurar Validaciones en rango predeterminado (filas 2 a 500)
+  // Configurar Validaciones en rango predeterminado
   aplicarValidacionesMatriz(ss);
 }
 
@@ -276,7 +285,7 @@ function aplicarValidacionesMatriz(ss) {
 }
 
 // ==========================================
-// DISPARADOR ONEDIT
+// DISPARADOR ONEDIT (FUNCIONA NATIVAMENTE EN MÓVIL/CELULAR)
 // ==========================================
 function onEdit(e) {
   if (!e || !e.range) return;
@@ -297,13 +306,21 @@ function onEdit(e) {
   // Asegurar ID y Fecha de Registro si se escribe cualquier dato en la fila
   asegurarIdYFechaRegistro(hoja, fila);
 
-  // Lógica según la columna editada
+  // Lógica según la columna editada (compatible totalmente con el celular)
   if (columna === COLUMNAS_MATRIZ.EMPRESA) {
     alCambiarEmpresa(ss, hoja, fila, range.getValue());
   } else if (columna === COLUMNAS_MATRIZ.SUCURSAL) {
     alCambiarSucursal(ss, hoja, fila, range.getValue());
+  } else if (columna === COLUMNAS_MATRIZ.SUPERVISOR || columna === COLUMNAS_MATRIZ.DESCRIPCION || columna === COLUMNAS_MATRIZ.SERVICIO) {
+    actualizarLinkWhatsAppCelular(ss, hoja, fila);
   } else if (columna === COLUMNAS_MATRIZ.ESTATUS) {
     alCambiarEstatus(ss, hoja, fila, range.getValue());
+  }
+
+  // Auto-crear carpeta de Drive si se asigna o si se escribe "CREAR" en evidencias en celular
+  const valEvidencias = String(hoja.getRange(fila, COLUMNAS_MATRIZ.EVIDENCIAS).getValue()).trim().toUpperCase();
+  if (valEvidencias === 'CREAR' || valEvidencias === 'NUEVA') {
+    crearCarpetaEvidenciasPorFila(ss, hoja, fila);
   }
 }
 
@@ -465,6 +482,36 @@ function aplicarColorPorEstatus(hoja, fila, estatus) {
 }
 
 // ==========================================
+// ENLACE DE WHATSAPP DIRECTO EN CELULAR
+// ==========================================
+function actualizarLinkWhatsAppCelular(ss, hoja, fila) {
+  const ticket = obtenerDatosTicketFila(hoja, fila);
+  const celdaLink = hoja.getRange(fila, COLUMNAS_MATRIZ.LINK_WHATSAPP);
+
+  if (!ticket.supervisor) {
+    celdaLink.setValue('');
+    return;
+  }
+
+  const supervisorObj = obtenerContactoSupervisor(ss, ticket.supervisor);
+  if (!supervisorObj || !supervisorObj.telefono) {
+    celdaLink.setValue('Sin teléfono');
+    return;
+  }
+
+  const mensaje = `Hola ${supervisorObj.nombre}, se te ha asignado el ticket *${ticket.id}*.\n` +
+    `• *Servicio:* ${ticket.servicio || 'N/A'}\n` +
+    `• *Cliente:* ${ticket.empresa || 'N/A'} - ${ticket.sucursal || 'N/A'}\n` +
+    `• *Ubicación:* ${ticket.ubicacion || 'N/A'}\n` +
+    `• *Prioridad:* ${ticket.estatusAtencion || 'Normal'}\n` +
+    `• *Descripción:* ${ticket.descripcion || 'Sin descripción'}\n\n` +
+    `Por favor revisa y asigna al trabajador/contratista correspondiente.`;
+
+  const urlWa = construirLinkWhatsApp(supervisorObj.telefono, mensaje);
+  celdaLink.setValue(urlWa);
+}
+
+// ==========================================
 // BÚSQUEDA DE CONTACTOS Y CONFIGURACIÓN
 // ==========================================
 function obtenerConfiguracion(ss) {
@@ -549,7 +596,8 @@ function obtenerDatosTicketFila(hoja, fila) {
     motivoParada: valores[COLUMNAS_MATRIZ.MOTIVO_PARADA - 1],
     evidencias: valores[COLUMNAS_MATRIZ.EVIDENCIAS - 1],
     fechaFinalizacion: valores[COLUMNAS_MATRIZ.FECHA_FINALIZACION - 1],
-    observaciones: valores[COLUMNAS_MATRIZ.OBSERVACIONES - 1]
+    observaciones: valores[COLUMNAS_MATRIZ.OBSERVACIONES - 1],
+    linkWhatsapp: valores[COLUMNAS_MATRIZ.LINK_WHATSAPP - 1]
   };
 }
 
@@ -651,7 +699,7 @@ function enviarCorreoSeguro(destinatario, asunto, cuerpo) {
 }
 
 // ==========================================
-// FUNCIÓN WHATSAPP SUPERVISOR (MANUAL)
+// FUNCIÓN WHATSAPP SUPERVISOR
 // ==========================================
 function construirLinkWhatsApp(telefono, mensaje) {
   if (!telefono) return null;
@@ -675,64 +723,33 @@ function enviarWhatsAppSupervisorSeleccionado() {
     return;
   }
 
+  actualizarLinkWhatsAppCelular(ss, hoja, fila);
   const ticket = obtenerDatosTicketFila(hoja, fila);
-  if (!ticket.supervisor) {
-    SpreadsheetApp.getUi().alert('⚠️ La fila seleccionada no tiene un Supervisor asignado.');
-    return;
+
+  if (ticket.linkWhatsapp && ticket.linkWhatsapp.startsWith('https://wa.me')) {
+    const htmlOutput = HtmlService.createHtmlOutput(
+      `<p>Haz clic en el siguiente enlace para abrir WhatsApp:</p>` +
+      `<p><a href="${ticket.linkWhatsapp}" target="_blank" style="padding:10px 15px; background-color:#25D366; color:white; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">📱 Abrir WhatsApp</a></p>`
+    ).setWidth(400).setHeight(150);
+
+    SpreadsheetApp.getUi().showModalDialog(htmlOutput, `Enviar WhatsApp a Supervisor`);
+  } else {
+    SpreadsheetApp.getUi().alert('⚠️ No se pudo generar el enlace de WhatsApp. Verifica que el supervisor tenga teléfono.');
   }
-
-  const supervisorObj = obtenerContactoSupervisor(ss, ticket.supervisor);
-  if (!supervisorObj || !supervisorObj.telefono) {
-    SpreadsheetApp.getUi().alert(`⚠️ No se encontró el número de teléfono/WhatsApp para el supervisor "${ticket.supervisor}". Verifica la hoja "Supervisores".`);
-    return;
-  }
-
-  const mensaje = `Hola ${supervisorObj.nombre}, se te ha asignado el ticket *${ticket.id}*.\n` +
-    `• *Servicio:* ${ticket.servicio}\n` +
-    `• *Cliente:* ${ticket.empresa} - ${ticket.sucursal}\n` +
-    `• *Ubicación:* ${ticket.ubicacion}\n` +
-    `• *Prioridad:* ${ticket.estatusAtencion}\n` +
-    `• *Descripción:* ${ticket.descripcion}\n\n` +
-    `Por favor revisa y asigna al trabajador/contratista correspondiente.`;
-
-  const linkWa = construirLinkWhatsApp(supervisorObj.telefono, mensaje);
-
-  const htmlOutput = HtmlService.createHtmlOutput(
-    `<p>Haz clic en el siguiente enlace para abrir WhatsApp con el mensaje pre-cargado:</p>` +
-    `<p><a href="${linkWa}" target="_blank" style="padding:10px 15px; background-color:#25D366; color:white; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">📱 Abrir WhatsApp Web / App</a></p>`
-  ).setWidth(400).setHeight(150);
-
-  SpreadsheetApp.getUi().showModalDialog(htmlOutput, `Enviar WhatsApp a ${supervisorObj.nombre}`);
 }
 
 // ==========================================
 // CARPETA DE EVIDENCIAS EN GOOGLE DRIVE
 // ==========================================
-function crearCarpetaEvidenciasSeleccionada() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const hoja = ss.getActiveSheet();
-
-  if (hoja.getName() !== HOJAS.MATRIZ) {
-    SpreadsheetApp.getUi().alert('⚠️ Por favor selecciona una celda dentro de la hoja "Matriz".');
-    return;
-  }
-
-  const fila = hoja.getActiveCell().getRow();
-  if (fila <= 1) {
-    SpreadsheetApp.getUi().alert('⚠️ Por favor selecciona una fila de ticket válida.');
-    return;
-  }
-
+function crearCarpetaEvidenciasPorFila(ss, hoja, fila) {
   const ticket = obtenerDatosTicketFila(hoja, fila);
-  if (!ticket.id) {
-    SpreadsheetApp.getUi().alert('⚠️ El ticket seleccionado aún no tiene un ID generado.');
-    return;
-  }
+  if (!ticket.id) return null;
 
   const celdaEvidencias = hoja.getRange(fila, COLUMNAS_MATRIZ.EVIDENCIAS);
-  if (celdaEvidencias.getValue()) {
-    SpreadsheetApp.getUi().alert(`ℹ️ El ticket ${ticket.id} ya cuenta con un enlace de evidencias.`);
-    return;
+  const valorActual = String(celdaEvidencias.getValue()).trim();
+
+  if (valorActual.startsWith('http')) {
+    return valorActual; // Ya tiene carpeta creada
   }
 
   try {
@@ -750,9 +767,32 @@ function crearCarpetaEvidenciasSeleccionada() {
     const urlCarpeta = nuevaCarpeta.getUrl();
 
     celdaEvidencias.setValue(urlCarpeta);
-
-    SpreadsheetApp.getUi().alert(`✅ Carpeta creada exitosamente para el ticket ${ticket.id}:\n${urlCarpeta}`);
+    return urlCarpeta;
   } catch (err) {
-    SpreadsheetApp.getUi().alert(`❌ Error al crear la carpeta en Google Drive: ${err.message}`);
+    Logger.log(`Error al crear carpeta en Drive: ${err.message}`);
+    return null;
+  }
+}
+
+function crearCarpetaEvidenciasSeleccionada() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hoja = ss.getActiveSheet();
+
+  if (hoja.getName() !== HOJAS.MATRIZ) {
+    SpreadsheetApp.getUi().alert('⚠️ Por favor selecciona una celda dentro de la hoja "Matriz".');
+    return;
+  }
+
+  const fila = hoja.getActiveCell().getRow();
+  if (fila <= 1) {
+    SpreadsheetApp.getUi().alert('⚠️ Por favor selecciona una fila de ticket válida.');
+    return;
+  }
+
+  const url = crearCarpetaEvidenciasPorFila(ss, hoja, fila);
+  if (url) {
+    SpreadsheetApp.getUi().alert(`✅ Carpeta creada o verificada exitosamente:\n${url}`);
+  } else {
+    SpreadsheetApp.getUi().alert(`❌ No se pudo crear la carpeta en Google Drive.`);
   }
 }
